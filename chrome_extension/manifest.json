@@ -1,0 +1,14 @@
+{
+    "manifest_version": 3,
+    "name": "Email Spam Checker",
+    "description": "Check if an email is spam using a local AI model.",
+    "version": "1.0",
+    "permissions": ["activeTab", "scripting"],
+    "action": {
+      "default_popup": "popup.html",
+      "default_icon": {
+        "16": "icon.png"
+      }
+    }
+  }
+  

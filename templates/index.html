@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Spam Detector</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"> <!-- For icons -->
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f7f7f7;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            resize: none;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            border-color: #5cb85c;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #4cae4c;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 18px;
+            color: #007bff;
+            text-align: center;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #f39c12;
+        }
+
+        .loading i {
+            font-size: 24px;
+            animation: spin 1s infinite linear;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: #e74c3c;
+        }
+
+        .success {
+            color: #2ecc71;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            textarea {
+                height: 120px;
+            }
+
+            button {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Email Spam Detection</h1>
+        <textarea id="emailInput" placeholder="Enter your email content here..."></textarea>
+        <button onclick="checkSpam()">Check</button>
+        <div class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Checking...
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function checkSpam() {
+            const email = document.getElementById("emailInput").value;
+            const resultDiv = document.getElementById("result");
+            const loadingDiv = document.querySelector(".loading");
+
+            if (!email.trim()) {
+                resultDiv.textContent = "Error: Please enter some text.";
+                resultDiv.className = 'error';
+                return;
+            }
+
+            // Show loading indicator
+            loadingDiv.style.display = 'block';
+            resultDiv.textContent = '';
+            resultDiv.className = '';  // Reset result text style
+
+            fetch("/predict", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ email: email })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingDiv.style.display = 'none'; // Hide loading spinner
+                if (data.result) {
+                    resultDiv.textContent = "Prediction: " + data.result;
+                    resultDiv.className = data.result.toLowerCase() === "spam" ? 'error' : 'success';
+                } else if (data.error) {
+                    resultDiv.textContent = "Error: " + data.error;
+                    resultDiv.className = 'error';
+                }
+            })
+            .catch(error => {
+                loadingDiv.style.display = 'none';
+                resultDiv.textContent = "Error: Could not get prediction.";
+                resultDiv.className = 'error';
+            });
+        }
+    </script>
+</body>
+</html>
