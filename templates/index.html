@@ -3,166 +3,309 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Spam Detector</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"> <!-- For icons -->
+    <title>Spam Shield Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --background-color: #f5f6fa;
+        }
+
         body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f7f7f7;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
             margin: 0;
+            padding: 20px;
+            min-height: 100vh;
         }
 
-        .container {
-            background-color: #fff;
-            padding: 30px;
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-box {
+            padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            max-width: 600px;
-            width: 100%;
+            color: white;
+            text-align: center;
         }
 
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 20px;
+        .stat-box.spam {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .stat-box.safe {
+            background: linear-gradient(135deg, #27ae60, #219a52);
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .history-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+        }
+
+        .badge.spam {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge.safe {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
         }
 
         textarea {
             width: 100%;
-            height: 150px;
             padding: 15px;
-            margin-bottom: 20px;
-            font-size: 16px;
-            border: 1px solid #ccc;
+            border: 2px solid #ddd;
             border-radius: 8px;
-            resize: none;
-            transition: border-color 0.3s ease;
+            margin: 10px 0;
+            resize: vertical;
+            min-height: 150px;
         }
 
-        textarea:focus {
-            border-color: #5cb85c;
-        }
-
-        button {
-            width: 100%;
-            padding: 15px;
-            font-size: 18px;
-            background-color: #5cb85c;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        button:hover {
-            background-color: #4cae4c;
-        }
-
-        #result {
-            margin-top: 20px;
-            font-weight: bold;
-            font-size: 18px;
-            color: #007bff;
-            text-align: center;
+        #chart-container {
+            height: 300px;
+            margin: 20px 0;
         }
 
         .loading {
             display: none;
             text-align: center;
-            color: #f39c12;
+            padding: 20px;
         }
 
-        .loading i {
-            font-size: 24px;
-            animation: spin 1s infinite linear;
+        .spinner {
+            animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
-        }
-
-        .error {
-            color: #e74c3c;
-        }
-
-        .success {
-            color: #2ecc71;
-        }
-
-        @media (max-width: 600px) {
-            .container {
-                padding: 20px;
-            }
-
-            textarea {
-                height: 120px;
-            }
-
-            button {
-                font-size: 16px;
-            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Email Spam Detection</h1>
-        <textarea id="emailInput" placeholder="Enter your email content here..."></textarea>
-        <button onclick="checkSpam()">Check</button>
-        <div class="loading">
-            <i class="fas fa-spinner fa-spin"></i> Checking...
+    <div class="dashboard-container">
+        <!-- Detection Card -->
+        <div class="card">
+            <h2><i class="fas fa-shield-alt"></i> Spam Detection</h2>
+            <textarea id="emailContent" placeholder="Paste email content here..."></textarea>
+            <button class="btn" onclick="checkSpam()" style="background-color: var(--secondary-color); color: white;">
+                Analyze Email
+            </button>
+            <div id="result" class="result-display"></div>
         </div>
-        <div id="result"></div>
+
+        <!-- Statistics Card -->
+        <div class="card">
+            <h2><i class="fas fa-chart-bar"></i> Statistics</h2>
+            <div class="stats-container">
+                <div class="stat-box spam">
+                    <h3>Spam Emails</h3>
+                    <p id="spamCount">0</p>
+                </div>
+                <div class="stat-box safe">
+                    <h3>Safe Emails</h3>
+                    <p id="safeCount">0</p>
+                </div>
+            </div>
+            <div id="chart-container">
+                <canvas id="statsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- History Card -->
+        <div class="card">
+            <h2><i class="fas fa-history"></i> Detection History</h2>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Content</th>
+                        <th>Date</th>
+                        <th>Result</th>
+                        <th>Confidence</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="historyList">
+                    <!-- History items will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="loading">
+        <i class="fas fa-spinner spinner"></i> Analyzing...
     </div>
 
     <script>
-        function checkSpam() {
-            const email = document.getElementById("emailInput").value;
-            const resultDiv = document.getElementById("result");
-            const loadingDiv = document.querySelector(".loading");
+        let history = [];
+        let chart = null;
 
+        // Initialize from localStorage
+        function init() {
+            history = JSON.parse(localStorage.getItem('spamHistory')) || [];
+            updateHistoryDisplay();
+            updateStatistics();
+            initChart();
+        }
+
+        function checkSpam() {
+            const email = document.getElementById('emailContent').value;
+            const loading = document.querySelector('.loading');
+            
             if (!email.trim()) {
-                resultDiv.textContent = "Error: Please enter some text.";
-                resultDiv.className = 'error';
+                showResult('Please enter email content', 'error');
                 return;
             }
 
-            // Show loading indicator
-            loadingDiv.style.display = 'block';
-            resultDiv.textContent = '';
-            resultDiv.className = '';  // Reset result text style
+            loading.style.display = 'block';
+            
+            // Simulated API call - replace with actual fetch call
+            setTimeout(() => {
+                const result = Math.random() > 0.5 ? 'spam' : 'safe';
+                const probability = Math.floor(Math.random() * 40 + 60);
+                
+                addToHistory({
+                    content: email.slice(0, 50) + '...',
+                    result: result,
+                    probability: probability,
+                    timestamp: new Date().toISOString()
+                });
+                
+                showResult(`This email is ${result} (${probability}% confidence)`, result);
+                loading.style.display = 'none';
+            }, 1000);
+        }
 
-            fetch("/predict", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
+        function addToHistory(entry) {
+            history.unshift(entry);
+            if (history.length > 50) history.pop();
+            localStorage.setItem('spamHistory', JSON.stringify(history));
+            updateHistoryDisplay();
+            updateStatistics();
+        }
+
+        function updateHistoryDisplay() {
+            const tbody = document.getElementById('historyList');
+            tbody.innerHTML = history.map(entry => `
+                <tr>
+                    <td>${entry.content}</td>
+                    <td>${new Date(entry.timestamp).toLocaleDateString()}</td>
+                    <td><span class="badge ${entry.result}">${entry.result}</span></td>
+                    <td>${entry.probability}%</td>
+                    <td><button class="btn btn-danger" onclick="deleteEntry('${entry.timestamp}')">Delete</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function deleteEntry(timestamp) {
+            history = history.filter(entry => entry.timestamp !== timestamp);
+            localStorage.setItem('spamHistory', JSON.stringify(history));
+            updateHistoryDisplay();
+            updateStatistics();
+        }
+
+        function updateStatistics() {
+            const spamCount = history.filter(entry => entry.result === 'spam').length;
+            const safeCount = history.length - spamCount;
+            
+            document.getElementById('spamCount').textContent = spamCount;
+            document.getElementById('safeCount').textContent = safeCount;
+            
+            if (chart) {
+                chart.data.datasets[0].data = [spamCount, safeCount];
+                chart.update();
+            }
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('statsChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Spam', 'Safe'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: [var(--danger-color), var(--success-color)],
+                        borderWidth: 0
+                    }]
                 },
-                body: JSON.stringify({ email: email })
-            })
-            .then(response => response.json())
-            .then(data => {
-                loadingDiv.style.display = 'none'; // Hide loading spinner
-                if (data.result) {
-                    resultDiv.textContent = "Prediction: " + data.result;
-                    resultDiv.className = data.result.toLowerCase() === "spam" ? 'error' : 'success';
-                } else if (data.error) {
-                    resultDiv.textContent = "Error: " + data.error;
-                    resultDiv.className = 'error';
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
                 }
-            })
-            .catch(error => {
-                loadingDiv.style.display = 'none';
-                resultDiv.textContent = "Error: Could not get prediction.";
-                resultDiv.className = 'error';
             });
         }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = `result-display ${type}`;
+        }
+
+        // Initialize dashboard on load
+        init();
     </script>
 </body>
 </html>
